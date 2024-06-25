@@ -1,0 +1,84 @@
+package driver;
+
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+public class FileUploader {
+
+    public static void main(String[] args) {
+        String urlString = "http://10.60.23.210:8000/detect/";
+		String image = "\\temp_ocr.png";
+		String dynamicPath = "C:\\Users\\TG1773\\GGWorkspace\\GamesGlobalAutomation (3)\\GamesGlobalAutomation\\screenshots\\HyperStar_SamsungGalaxyS8_Landscape_20240621_160129";
+        String filePath = dynamicPath+image;
+        String boundary = "---------------------------" + System.currentTimeMillis();
+        String lineEnd = "\r\n";
+        String twoHyphens = "--";
+        HttpURLConnection connection = null;
+        DataOutputStream outputStream = null;
+
+        try {
+            File file = new File(filePath);
+            FileInputStream fileInputStream = new FileInputStream(file);
+
+            URL url = new URL(urlString);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            connection.setUseCaches(false);
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Connection", "Keep-Alive");
+            connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+
+            outputStream = new DataOutputStream(connection.getOutputStream());
+
+            outputStream.writeBytes(twoHyphens + boundary + lineEnd);
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"file\";filename=\"" + file.getName() + "\"" + lineEnd);
+            outputStream.writeBytes(lineEnd);
+
+            int bytesRead, bytesAvailable, bufferSize;
+            byte[] buffer;
+            int maxBufferSize = 1 * 1024 * 1024;
+
+            bytesAvailable = fileInputStream.available();
+            bufferSize = Math.min(bytesAvailable, maxBufferSize);
+            buffer = new byte[bufferSize];
+
+            bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+            while (bytesRead > 0) {
+                outputStream.write(buffer, 0, bufferSize);
+                bytesAvailable = fileInputStream.available();
+                bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            }
+
+            outputStream.writeBytes(lineEnd);
+            outputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+
+            fileInputStream.close();
+            outputStream.flush();
+            outputStream.close();
+
+            InputStream inputStream = connection.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder stringBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line);
+            }
+            reader.close();
+
+            System.out.println("Response from server:");
+            System.out.println(stringBuilder.toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+}
+
